@@ -11,6 +11,8 @@ Claude Code  →  AI Vault  →  Your MCP Tools
            localhost:8484
 ```
 
+![AI Vault Dashboard](docs/dashboard.png)
+
 ## Why?
 
 MCP tools are powerful — they let AI agents search the web, run code, access APIs, read files. But today there's no easy way to see what your agent accessed, or to block specific tools without removing them entirely.
