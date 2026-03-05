@@ -1,11 +1,11 @@
 # AI Vault
 
-**A firewall for your AI agent's tool access.**
+**A firewall for your AI agent's resource access.**
 
-AI Vault sits between Claude (or any MCP client) and your MCP tools, giving you visibility and control over what your AI agent can access. Every tool call is logged, and you decide what's allowed.
+AI Vault sits between Claude (or any MCP client) and your resources — secrets, API keys, MCP tools — giving you visibility and control over what your AI agent can access. Every access is logged, and you decide what's allowed.
 
 ```
-Claude Code  →  AI Vault  →  Your MCP Tools
+Claude Code  →  AI Vault  →  Secrets, API Keys, MCP Tools
                    ↓
               Dashboard at
            localhost:8484
@@ -15,13 +15,23 @@ Claude Code  →  AI Vault  →  Your MCP Tools
 
 ## Why?
 
-MCP tools are powerful — they let AI agents search the web, run code, access APIs, read files. But today there's no easy way to see what your agent accessed, or to block specific tools without removing them entirely.
+AI agents are getting access to more and more: your API keys, database credentials, MCP tools that can search the web, run code, or hit external APIs. But today there's no easy way to see what your agent accessed, control which secrets it can read, or block specific tools without removing them entirely.
 
-AI Vault adds a control layer:
+AI Vault adds a control layer for everything your AI touches:
 
-- **🔴 Blocked** — Tool is completely blocked. AI never sees it.
-- **🟡 Ask** — Tool requires approval before each use.
-- **🟢 Open** — Tool works freely. Every call is still logged.
+- **🔴 Blocked** — Resource is invisible to the AI. Access denied, attempt logged.
+- **🟡 Ask** — Requires your approval before each use.
+- **🟢 Open** — Works freely. Every access is still logged.
+
+This applies to **secrets** (API keys, tokens, credentials), **MCP tools** (web search, code execution, GitHub), and **files**.
+
+## What You Can Manage
+
+| Resource Type | Examples | What Vault Does |
+|--------------|----------|----------------|
+| **Secrets** | API keys, tokens, database passwords | Encrypted at rest (AES-256-GCM), access-controlled per key, every read logged |
+| **MCP Tools** | GitHub, Brave Search, Puppeteer, custom tools | Proxied through vault, per-tool access levels, full call audit trail |
+| **Files** | Config files, credentials files | Access-controlled, read attempts logged |
 
 ## Quick Start
 
@@ -29,7 +39,7 @@ AI Vault adds a control layer:
 
 ```bash
 # Clone and install
-git clone https://github.com/milosborenovic/ai-vault.git
+git clone https://github.com/milos-product-maker/ai-vault.git
 cd ai-vault
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
@@ -43,7 +53,7 @@ ai-vault setup
 # Restart Claude Code to pick up the new config
 ```
 
-That's it. Your existing MCP servers are now managed through the vault, and the dashboard is available at **http://localhost:8484** whenever Claude Code is running.
+That's it. Your existing MCP servers are imported into the vault, and the dashboard is available at **http://localhost:8484** whenever Claude Code is running.
 
 ## What happens after setup?
 
@@ -56,12 +66,25 @@ That's it. Your existing MCP servers are now managed through the vault, and the 
 
 The dashboard at `localhost:8484` shows:
 
-- **Pending Approvals** — approve or deny tool access requests with one click
-- **Most Accessed** — see which tools your AI uses most
-- **Recent Activity** — full audit trail of every tool call, access attempt, and approval
-- **Resource Management** — add, edit, or remove tools and secrets
+- **Pending Approvals** — approve or deny access requests with one click
+- **Most Accessed** — see which resources your AI uses most
+- **Recent Activity** — full audit trail of every access, tool call, and approval
+- **Resource Management** — add, edit, or remove secrets, tools, and files
 
-## Adding New Tools
+## Managing Secrets
+
+Store API keys and credentials in the vault instead of `.env` files or plaintext configs. The AI can request access, but you control who sees what.
+
+```bash
+# Add secrets with access control
+ai-vault add OPENAI_API_KEY --value "sk-..." --level green    # AI can read freely
+ai-vault add PROD_DB_PASSWORD --value "..." --level red       # AI never sees this
+ai-vault add STRIPE_SECRET --value "sk_live_..." --level yellow  # AI must ask first
+```
+
+When Claude needs a secret, it calls `vault_get_resource` — the vault checks the access level, logs the attempt, and returns the value (or blocks it).
+
+## Managing MCP Tools
 
 After setup, add new MCP tools through the vault instead of editing `~/.claude.json` directly:
 
@@ -75,6 +98,8 @@ ai-vault add-tool brave-search --command npx --arg "-y" --arg "@modelcontextprot
 1. Open http://localhost:8484/resources
 2. Click **+ Add Resource** → select **MCP Tool**
 3. Fill in the command, arguments, and access level
+
+The vault manages MCP server lifecycle — it starts downstream servers on demand, proxies tool calls, and shuts them down when idle.
 
 ## CLI Reference
 
@@ -100,19 +125,17 @@ All data is stored locally in `~/.ai-vault/vault.db` (SQLite). Secrets are encry
 ```
 ~/.ai-vault/
 ├── .env          # Encryption key (chmod 600)
-└── vault.db      # SQLite database
+└── vault.db      # SQLite database (encrypted secrets, access logs, policies)
 ```
 
 ## How It Works
 
-When Claude calls a tool through the vault:
+When Claude requests any resource through the vault:
 
-1. **Policy check** — Is the tool 🔴 blocked, 🟡 ask, or 🟢 open?
-2. **If open** — Vault proxies the call to the downstream MCP server, logs it
+1. **Policy check** — Is the resource 🔴 blocked, 🟡 ask, or 🟢 open?
+2. **If open** — Returns the secret / proxies the tool call, logs it
 3. **If ask** — Creates an approval request, waits for you to allow/deny in the dashboard
 4. **If blocked** — Returns an error to Claude, logs the attempt
-
-The vault manages MCP server lifecycle — it starts downstream servers on demand, proxies tool calls, and shuts them down when idle.
 
 ## Undoing Setup
 
