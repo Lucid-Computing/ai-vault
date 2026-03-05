@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Static UI (built from source)
+ai_vault/static/
+
+# Test/dev
+.pytest_cache/
+.ruff_cache/
+
+# UI
+ui/node_modules/
+ui/.svelte-kit/
+
+# Vault data (user-specific)
+*.db
+.env
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Internal docs (not for public repo)
+HANDOFF.md
