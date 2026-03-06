@@ -39,7 +39,7 @@ This applies to **secrets** (API keys, tokens, credentials), **MCP tools** (web 
 
 ```bash
 # Clone and install
-git clone https://github.com/milos-product-maker/ai-vault.git
+git clone https://github.com/Lucid-Computing/ai-vault.git
 cd ai-vault
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
